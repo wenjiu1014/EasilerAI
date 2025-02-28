@@ -1,13 +1,14 @@
 
 const defaultConfig = {
   opacity: 0.6,
-  mainColor: '#49CE95',
+  // mainColor: '#49CE95',
+  mainColor: '#000',
   subColor: '#FA0A55'
 }
 
 const getConfig = () => {
   const config = localStorage.getItem('config')
-  return config?JSON.parse(config):defaultConfig
+  return config ? JSON.parse(config) : defaultConfig
 }
 
 /**

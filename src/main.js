@@ -1,11 +1,7 @@
-const { app, Menu, BrowserWindow, ipcMain } = require('electron');
+const { app, Menu, BrowserWindow, ipcMain, Tray } = require('electron');
 const path = require('path');
-const { initDb, addEssay, changeEssayStatus, getAllEssay, getAllTodo, addTodo, changeTodoStatus, getBallData } = require('./utils/database.js')
-const { createSuspensionWindow, createEssayWindow, createTodoWindow, createConfigWindow } = require("./window.js")
-// Menu.setApplicationMenu(null);
+const { createSuspensionWindow, createWebsiteWindow } = require("./window.js")
 
-// 初始化数据库，生成库和表
-initDb()
 
 // 悬浮球的一些设置
 const suspensionConfig = {
@@ -13,29 +9,71 @@ const suspensionConfig = {
   height: 50,
 }
 
-// const suspensionConfig = {
-//   width: 200,
-//   height: 347,
-// }
 
 // 定义所有可能用到的页面
 const pages = {
   suspensionWin: undefined,
-  essayWin: undefined,
-  todoWin: undefined,
-  configWin: undefined,
+  websiteWin: undefined
 }
 
+let tray;
+let suspensionVisible = true;
+let rotateFlag = true;
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
-  app.quit();
-}
+// if (require('electron-squirrel-startup')) {
+//   app.quit();
+// }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   pages.suspensionWin = createSuspensionWindow(suspensionConfig)
+  // 创建托盘图标及其菜单
+  tray = new Tray(path.join(__dirname, './assets/chat.png'));
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示应用',
+      click: () => {
+        pages.websiteWin.show();
+      }
+    },
+    {
+      label: '隐藏/显示悬浮球',
+      click: () => {
+        if (suspensionVisible) {
+          pages.suspensionWin.hide();
+        } else {
+          pages.suspensionWin.show();
+        }
+        suspensionVisible = !suspensionVisible;
+      }
+    },
+    {
+      label: '退出',
+      click: () => {
+        app.isQuiting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setToolTip('我的应用');
+  tray.setContextMenu(contextMenu);
+
+  tray.on('click', () => {
+    if (pages.websiteWin) {
+      if (pages.websiteWin.isDestroyed()) {
+        pages.websiteWin = null
+      }
+    }
+    if (pages.websiteWin) {
+      pages.websiteWin.isVisible() ? pages.websiteWin.hide() : pages.websiteWin.show();
+    } else {
+      pages.websiteWin = createWebsiteWindow();
+      pages.websiteWin.show();
+    }
+  });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -60,27 +98,33 @@ app.on('activate', () => {
 
 // 主进程监听事件相关
 
-ipcMain.on('showEssay', (e, data) => {
-  if (pages.essayWin) {
-    // 如果已经打开了 就关闭重打开
-    pages.essayWin.close()
-    pages.essayWin = null
-  }
-  pages.essayWin = createEssayWindow()
-  pages.essayWin.on('close', (e, data) => {
-    pages.essayWin = null
-  })
-})
 
-ipcMain.on('showTodo', (e, data) => {
-  if (pages.todoWin) {
-    pages.todoWin.close()
-    pages.todoWin = null
+
+
+
+ipcMain.on('showWebsite', (e, data) => {
+  if (pages.websiteWin) {
+    if (pages.websiteWin.isDestroyed()) {
+      pages.websiteWin = null
+    }
   }
-  pages.todoWin = createTodoWindow()
-  pages.todoWin.on('close', (e, data) => {
-    pages.todoWin = null
-  })
+  if (pages.websiteWin) {
+    if (pages.websiteWin.isVisible()) {
+      pages.websiteWin.hide()
+    } else {
+      pages.websiteWin.show()
+    }
+  } else {
+    pages.websiteWin = createWebsiteWindow()
+    // pages.websiteWin.on('close', (e, data) => {
+    //   pages.websiteWin = null
+    // })
+    pages.websiteWin.show()
+  }
+  // pages.websiteWin = createWebsiteWindow()
+  // pages.websiteWin.on('close', (e, data) => {
+  //   pages.websiteWin = null
+  // })
 })
 
 ipcMain.on('ballWindowMove', (e, data) => {
@@ -88,24 +132,38 @@ ipcMain.on('ballWindowMove', (e, data) => {
   // pages.floatWin.setPosition(data.x, data.y)
 })
 
+// 处理窗口控制按钮的事件
+ipcMain.on('window-control', (event, action) => {
+  switch (action) {
+    case 'minimize':
+      pages.websiteWin.minimize();
+      break;
+    case 'maximize':
+      pages.websiteWin.isMaximized() ? pages.websiteWin.unmaximize() : pages.websiteWin.maximize();
+      break;
+    case 'close':
+      pages.websiteWin.close();
+      pages.websiteWin = null;
+      break;
+  }
+});
+
+// 处理窗口尺寸调整
+ipcMain.on('resize-window', (event, size) => {
+  if (size === 'wide') {
+    pages.websiteWin.setSize(640, 480);
+  } else if (size === 'tall') {
+    pages.websiteWin.setSize(400, 730);
+    //左上角
+    pages.websiteWin.setPosition(0, 0);
+  }
+});
+
 let suspensionMenu
 let topFlag = true
 ipcMain.on('openMenu', (e) => {
   if (!suspensionMenu) {
     suspensionMenu = Menu.buildFromTemplate([
-      {
-        label: '配置',
-        click: () => {
-          if (pages.configWin) {
-            pages.configWin.close()
-            pages.configWin = null
-          }
-          pages.configWin = createConfigWindow()
-          pages.configWin.on('close', (e, data) => {
-            pages.configWin = null
-          })
-        }
-      },
       {
         label: '置顶/取消',
         click: () => {
@@ -114,10 +172,11 @@ ipcMain.on('openMenu', (e) => {
         }
       },
       {
-        label: '开发者工具',
+        label: '旋转/暂停',
         click: () => {
-          pages.suspensionWin.webContents.openDevTools({ mode: 'detach' })
-        }
+          rotateFlag = !rotateFlag;
+          pages.suspensionWin.webContents.send('toggle-rotate', rotateFlag);
+        },
       },
       {
         label: '重启',
@@ -139,64 +198,4 @@ ipcMain.on('openMenu', (e) => {
 
 ipcMain.on('setFloatIgnoreMouse', (e, data) => {
   pages.suspensionWin.setIgnoreMouseEvents(data, { forward: true })
-})
-
-ipcMain.on('essay', (e, data) => {
-  console.log(data.name)
-  if (data.name == "getAll") {
-    getAllEssay().then(res => {
-      e.returnValue = res
-    })
-  } else if (data.name == "change") {
-    changeEssayStatus(data.id, data.status)
-  } else if (data.name == "add") {
-    addEssay(data.content, data.time).then(
-      res => {
-        e.returnValue = res
-      },
-      e => {
-        console.log(e)
-      }
-    )
-  }
-})
-
-ipcMain.on('todo', (e, data) => {
-  console.log(data.name)
-  if (data.name == "getAll") {
-    getAllTodo(data.status).then(res => {
-      e.returnValue = res
-    }, e => {
-      console.log(e)
-    })
-  } else if (data.name == "change") {
-    changeTodoStatus(data.id, data.status)
-    getBallData().then(res => {
-      console.log(res)
-      pages.suspensionWin.webContents.send('update', res)
-    })
-  } else if (data.name == "add") {
-    addTodo(data.content, data.end_time).then(
-      res => {
-        getBallData().then(res => {
-          console.log(res)
-          pages.suspensionWin.webContents.send('update', res)
-        })
-        e.returnValue = res
-      },
-      e => {
-        console.log(e)
-      }
-    )
-  }
-})
-
-ipcMain.on('updateBall', (e, data) => {
-  getBallData().then(res => {
-    pages.suspensionWin.webContents.send('update', res)
-  })
-})
-
-ipcMain.on('updateConfig', (e, data) => {
-  pages.suspensionWin.webContents.send('config', data)
 })

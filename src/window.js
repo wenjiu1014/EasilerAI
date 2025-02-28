@@ -30,74 +30,55 @@ const createSuspensionWindow = (suspensionConfig) => {
 
   return win
 };
-
-const createEssayWindow = () => {
-  const { left, top } = { left: screen.getPrimaryDisplay().workAreaSize.width - 400, top: screen.getPrimaryDisplay().workAreaSize.height - 800 }
-  const win = new BrowserWindow({
-    width: 300,
-    height: 500,
-    minWidth: 300,
-    x: left,
-    y: top,
-    icon: path.join(__dirname, './assets/edit-green.png'),
+const createWebsiteWindow = () => {
+  win = new BrowserWindow({
+    width: 640,
+    height: 480,
+    minWidth: 325,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true,
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
-  win.loadFile(path.join(__dirname, 'views/Essay/index.html'));
-  // win.webContents.openDevTools()
-  return win
-}
+      webviewTag: true,
+      frame: false,
+      transparent: true,
+      zoomFactor: 0.75,
 
-const createTodoWindow = () => {
-  const { left, top } = { left: screen.getPrimaryDisplay().workAreaSize.width - 380, top: screen.getPrimaryDisplay().workAreaSize.height - 820 }
-  const win = new BrowserWindow({
-    width: 300,
-    minWidth: 300,
-    height: 500,
-    x: left,
-    y: top,
-    icon: path.join(__dirname, './assets/edit-green.png'),
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true,
-      preload: path.join(__dirname, 'preload.js'),
     },
+    alwaysOnTop: true,
+    frame: false,
   });
-  win.loadFile(path.join(__dirname, 'views/Todo/index.html'));
-  // win.webContents.openDevTools()
-  return win
-}
 
-const createConfigWindow = () => {
-  const { left, top } = { left: screen.getPrimaryDisplay().workAreaSize.width - 360, top: screen.getPrimaryDisplay().workAreaSize.height - 840 }
-  const win = new BrowserWindow({
-    width: 300,
-    minWidth: 300,
-    maxWidth: 300,
-    height: 500,
-    x: left,
-    y: top,
-    icon: path.join(__dirname, './assets/edit-green.png'),
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true,
-      preload: path.join(__dirname, 'preload.js'),
-    },
+  win.loadFile(path.join(__dirname, 'views/Website/index.html')); // 加载本地HTML文件
+
+  win.on('maximize', () => {
+    win.webContents.send('window-state', 'maximized');
   });
-  win.loadFile(path.join(__dirname, 'views/Config/index.html'));
-  // win.webContents.openDevTools()
+
+  win.on('unmaximize', () => {
+    win.webContents.send('window-state', 'normal');
+  });
+
+  // 最小化到托盘
+  win.on('minimize', (event) => {
+    event.preventDefault();
+    win.hide();
+  });
+
+  // 关闭窗口时隐藏到托盘
+  win.on('close', (event) => {
+    // if (!app.isQuiting) {
+    //   event.preventDefault();
+    //   win.hide();
+    // }
+    win.close();
+    win = null;
+  });
+
+  win.setAlwaysOnTop(true);
   return win
 }
 
 module.exports = {
   createSuspensionWindow,
-  createEssayWindow,
-  createTodoWindow,
-  createConfigWindow
+  createWebsiteWindow,
 }

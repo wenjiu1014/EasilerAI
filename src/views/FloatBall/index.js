@@ -1,6 +1,6 @@
 const { ipcRenderer } = require("electron");
 const Vue = require('vue')
-const {defaultConfig, getConfig, applyConfig}  = require("../../utils/store")
+const { defaultConfig, getConfig, applyConfig } = require("../../utils/store")
 
 applyConfig()
 let biasX = 0
@@ -14,12 +14,24 @@ function handleMove(e) {
   ipcRenderer.send('ballWindowMove', { x: e.screenX - biasX, y: e.screenY - biasY })
 }
 
+
+document.addEventListener('DOMContentLoaded', () => {
+  const imgElement = document.querySelector('.rotate');
+
+  ipcRenderer.on('toggle-rotate', (event, rotateFlag) => {
+    if (rotateFlag) {
+      imgElement.classList.add('rotate');
+    } else {
+      imgElement.classList.remove('rotate');
+    }
+  });
+});
+
 const app = Vue.createApp({
 
   data: () => {
     return {
       isNotMore: true,
-      count: [0, 0],
       opacity: 0.8,
       mainColor: '',
       subColor: ''
@@ -31,33 +43,25 @@ const app = Vue.createApp({
     this.mainColor = storage.mainColor
     this.subColor = storage.subColor
     this.opacity = storage.opacity
-    ipcRenderer.on("update", (e, data) => {
-      console.log(data)
-      this.count = data
-    })
-    ipcRenderer.on("config", (e, data) => {
-      this.opacity = data.opacity
-      this.mainColor = data.mainColor
-      this.subColor = data.subColor
-    })
-    ipcRenderer.send("updateBall")
+    // ipcRenderer.on("update", (e, data) => {
+    //   console.log(data)
+    //   this.count = data
+    // })
+    // ipcRenderer.on("config", (e, data) => {
+    //   this.opacity = data.opacity
+    //   this.mainColor = data.mainColor
+    //   this.subColor = data.subColor
+    // })
+    // ipcRenderer.send("updateBall")
   },
   methods: {
     showMore() {
       this.isNotMore = false
       // ipcRenderer.send('setFloatIgnoreMouse', false)
     },
-    showEssay(e) {
+    showWebsite() {
       if (calcS())
-        ipcRenderer.send("showEssay", "show")
-    },
-    showTodo() {
-      if (calcS())
-        ipcRenderer.send("showTodo", "show")
-    },
-    showSimTodo() {
-      if (calcS())
-        ipcRenderer.send("showSimTodo", "show")
+        ipcRenderer.send("showWebsite", "show")
     },
     hideMore() {
       this.isNotMore = true
@@ -83,17 +87,17 @@ const app = Vue.createApp({
       document.removeEventListener('mousemove', handleMove)
     },
   },
-  computed: {
-    progress: function () {
-      const totalCount = this.count[0] + this.count[1]
-      console.log("aaa" + totalCount)
-      if (totalCount == 0) {
-        return "0%"
-      } else {
-        const percent = parseInt(this.count[1] * 100 / totalCount)
-        return percent + "%"
-      }
-    }
-  }
+  // computed: {
+  //   progress: function () {
+  //     const totalCount = this.count[0] + this.count[1]
+  //     console.log("aaa" + totalCount)
+  //     if (totalCount == 0) {
+  //       return "0%"
+  //     } else {
+  //       const percent = parseInt(this.count[1] * 100 / totalCount)
+  //       return percent + "%"
+  //     }
+  //   }
+  // }
 })
 app.mount("#app")
