@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron Browser</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #titlebar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #444;
+            color: white;
+            padding: 10px;
+            -webkit-user-select: none;
+            -webkit-app-region: drag;
+            transition: display 0.3s;
+        }
+
+        #titlebar button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            -webkit-app-region: no-drag;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #titlebar button:hover {
+            background-color: #555;
+            color: #ff0;
+        }
+
+        #titlebar .dropdown {
+            position: relative;
+        }
+
+        #titlebar .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 1000;
+            min-width: 120px;
+        }
+
+        #titlebar .dropdown-content a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 5px 10px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #titlebar .dropdown-content a:hover {
+            background-color: #555;
+            color: #ff0;
+        }
+
+        #titlebar .dropdown.show .dropdown-content {
+            display: block;
+        }
+
+        #browser {
+            width: 100%;
+            height: calc(100vh - 47px);
+            border: none;
+            position: relative;
+        }
+
+        #toggleButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        #browser:hover #toggleButton {
+            display: block;
+        }
+
+        #arrowButton {
+            display: none;
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1000;
+        }
+    </style>
+    <link rel="stylesheet" href="../../font/iconfont.css">
+</head>
+
+<body>
+    <div id="titlebar">
+        <button class="iconfont" title="回退" onclick="goBack()">&#xe66d;</button>
+        <button class="iconfont" title="前进" onclick="goForward()">&#xe66c;</button>
+        <button class="iconfont" title="刷新" onclick="refreshPage()">&#xe67b;</button>
+        <button class="iconfont" title="缩小" onclick="zoomOut()">&#xe683;</button>
+        <button class="iconfont" title="放大" onclick="zoomIn()">&#xe684;</button>
+        <button class="iconfont" title="重置" onclick="resetZoom()">&#xe674;</button>
+        <button class="iconfont dropdown" id="switchButton" title="切换">
+            &#xe646;
+            <div class="dropdown-content">
+                <a href="#" onclick="changeSource('http://www.chatgpt.com'); return false;">ChatGPT</a>
+                <a href="#" onclick="changeSource('http://yuanbao.tencent.com/chat/naQivTmsDa'); return false;">腾讯元宝</a>
+                <a href="#" onclick="changeSource('http://tongyi.aliyun.com/qianwen/'); return false;">通义千问</a>
+            </div>
+        </button>
+        <button class="iconfont" title="宽型" onclick="resizeWindow('wide')">&#xea8b;</button>
+        <button class="iconfont" title="长型" onclick="resizeWindow('tall')">&#xe600;</button>
+
+        <button class="iconfont" title="最小化" style="margin-left: auto;"
+            onclick="windowControl('minimize')">&#xe67a;</button>
+        <button class="iconfont" title="最大化" id="maximize-btn" onclick="windowControl('maximize')">&#xe675;</button>
+        <button class="iconfont" title="关闭" onclick="windowControl('close')">&#xe668;</button>
+    </div>
+    <webview id="browser" src="https://www.chatgpt.com" webpreferences="nativeWindowOpen=yes"></webview>
+    <!-- <div id="toggleButton" title="切换标题栏"></div> -->
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const webview = document.getElementById('browser');
+        const titlebar = document.getElementById('titlebar');
+
+        function goBack() {
+            if (webview.canGoBack()) {
+                webview.goBack();
+            }
+        }
+
+        function goForward() {
+            if (webview.canGoForward()) {
+                webview.goForward();
+            }
+        }
+
+        function refreshPage() {
+            webview.reload();
+        }
+
+        function windowControl(action) {
+            ipcRenderer.send('window-control', action);
+        }
+
+        function zoomIn() {
+            webview.executeJavaScript('document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) + 0.1).toString()');
+        }
+
+        function zoomOut() {
+            webview.executeJavaScript('document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) - 0.1).toString()');
+        }
+
+        function resetZoom() {
+            webview.executeJavaScript('document.body.style.zoom = "1"');
+        }
+
+        function handleWheelEvent(event) {
+            if (event.ctrlKey) {
+                event.preventDefault(); // 防止默认的滚动行为
+                if (event.deltaY < 0) {
+                    zoomIn();
+                } else if (event.deltaY > 0) {
+                    zoomOut();
+                }
+            }
+        }
+
+        function changeSource(url) {
+            webview.src = url;
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('switchButton');
+            dropdown.classList.toggle('show');
+        }
+
+        // 点击空白区域时关闭下拉菜单
+        document.addEventListener('click', (event) => {
+            const dropdown = document.getElementById('switchButton');
+            if (!dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        document.getElementById('switchButton').addEventListener('click', (event) => {
+            event.stopPropagation(); // 阻止点击事件冒泡
+            toggleDropdown();
+        });
+
+        webview.addEventListener('wheel', (event) => {
+            handleWheelEvent(event);
+        });
+
+        function resizeWindow(size) {
+            ipcRenderer.send('resize-window', size);
+        }
+
+        ipcRenderer.on('window-state', (event, state) => {
+            const maximizeBtn = document.getElementById('maximize-btn');
+            if (state === 'maximized') {
+                maximizeBtn.innerHTML = '&#xe676;'; // Restore icon when the window is maximized
+            } else {
+                maximizeBtn.innerHTML = '&#xe675;'; // Maximize icon when the window is not maximized
+            }
+        });
+    </script>
+</body>
+
+</html>

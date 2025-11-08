@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>悬浮球</title>
+  <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+  <div id="app">
+    <div class="warp" @mouseup="handleMouseUp" @mousedown="handleMouseDown">
+      <transition name="fade">
+        <div class="son-container">
+          <div class="son-item" :style="{'background-color': 'rgba(255, 255, 255, 0.2)'}" @click="showWebsite">
+            <img class="rotate" draggable="false" src="../../assets/Chatgpt.png" alt="笔记">
+          </div>
+        </div>
+      </transition>
+    </div>
+  </div>
+  <script src="./index.js"></script>
+</body>
+
+</html>
