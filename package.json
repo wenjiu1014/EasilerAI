@@ -15,6 +15,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "sql.js": "^1.13.0",
     "vue": "^3.2.47"
   },
   "devDependencies": {
@@ -24,7 +25,7 @@
   },
   "build": {
     "appId": "com.liuxu.chatgpt",
-    "productName": "chatgpt",
+    "productName": "ChatGPT",
     "directories": {
       "output": "release"
     },
@@ -41,7 +42,10 @@
     },
     "win": {
       "icon": "./src/assets/chat.ico",
-      "target": "nsis"
+      "target": "nsis",
+      "certificateFile": null,
+      "certificatePassword": null,
+      "signingHashAlgorithms": ["sha256"]
     }
   }
 }

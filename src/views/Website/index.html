@@ -51,22 +51,21 @@
             left: 0;
             background-color: #333;
             color: white;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 4px;
             white-space: nowrap;
             z-index: 1000;
             min-width: 120px;
         }
 
-        #titlebar .dropdown-content a {
+        #titlebar .dropdown-content .source-item {
             color: white;
-            text-decoration: none;
             display: block;
-            padding: 5px 10px;
+            padding: 2px 0;
             transition: background-color 0.3s, color 0.3s;
         }
 
-        #titlebar .dropdown-content a:hover {
+        #titlebar .dropdown-content .source-item:hover {
             background-color: #555;
             color: #ff0;
         }
@@ -126,10 +125,8 @@
         <button class="iconfont" title="重置" onclick="resetZoom()">&#xe674;</button>
         <button class="iconfont dropdown" id="switchButton" title="切换">
             &#xe646;
-            <div class="dropdown-content">
-                <a href="#" onclick="changeSource('http://www.chatgpt.com'); return false;">ChatGPT</a>
-                <a href="#" onclick="changeSource('http://yuanbao.tencent.com/chat/naQivTmsDa'); return false;">腾讯元宝</a>
-                <a href="#" onclick="changeSource('http://tongyi.aliyun.com/qianwen/'); return false;">通义千问</a>
+            <div class="dropdown-content" id="sourcesList">
+                <!-- 动态生成的sources -->
             </div>
         </button>
         <button class="iconfont" title="宽型" onclick="resizeWindow('wide')">&#xea8b;</button>
@@ -142,94 +139,192 @@
     </div>
     <webview id="browser" src="https://www.chatgpt.com" webpreferences="nativeWindowOpen=yes"></webview>
     <!-- <div id="toggleButton" title="切换标题栏"></div> -->
-
-    <script>
-        const { ipcRenderer } = require('electron');
-        const webview = document.getElementById('browser');
-        const titlebar = document.getElementById('titlebar');
-
-        function goBack() {
-            if (webview.canGoBack()) {
-                webview.goBack();
-            }
-        }
-
-        function goForward() {
-            if (webview.canGoForward()) {
-                webview.goForward();
-            }
-        }
-
-        function refreshPage() {
-            webview.reload();
-        }
-
-        function windowControl(action) {
-            ipcRenderer.send('window-control', action);
-        }
-
-        function zoomIn() {
-            webview.executeJavaScript('document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) + 0.1).toString()');
-        }
-
-        function zoomOut() {
-            webview.executeJavaScript('document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) - 0.1).toString()');
-        }
-
-        function resetZoom() {
-            webview.executeJavaScript('document.body.style.zoom = "1"');
-        }
-
-        function handleWheelEvent(event) {
-            if (event.ctrlKey) {
-                event.preventDefault(); // 防止默认的滚动行为
-                if (event.deltaY < 0) {
-                    zoomIn();
-                } else if (event.deltaY > 0) {
-                    zoomOut();
-                }
-            }
-        }
-
-        function changeSource(url) {
-            webview.src = url;
-        }
-
-        function toggleDropdown() {
-            const dropdown = document.getElementById('switchButton');
-            dropdown.classList.toggle('show');
-        }
-
-        // 点击空白区域时关闭下拉菜单
-        document.addEventListener('click', (event) => {
-            const dropdown = document.getElementById('switchButton');
-            if (!dropdown.contains(event.target)) {
-                dropdown.classList.remove('show');
-            }
-        });
-
-        document.getElementById('switchButton').addEventListener('click', (event) => {
-            event.stopPropagation(); // 阻止点击事件冒泡
-            toggleDropdown();
-        });
-
-        webview.addEventListener('wheel', (event) => {
-            handleWheelEvent(event);
-        });
-
-        function resizeWindow(size) {
-            ipcRenderer.send('resize-window', size);
-        }
-
-        ipcRenderer.on('window-state', (event, state) => {
-            const maximizeBtn = document.getElementById('maximize-btn');
-            if (state === 'maximized') {
-                maximizeBtn.innerHTML = '&#xe676;'; // Restore icon when the window is maximized
-            } else {
-                maximizeBtn.innerHTML = '&#xe675;'; // Maximize icon when the window is not maximized
-            }
-        });
-    </script>
 </body>
+<script>
+    const { ipcRenderer } = require('electron');
+    const webview = document.getElementById('browser');
+    const titlebar = document.getElementById('titlebar');
 
+    function goBack() {
+        if (webview.canGoBack()) {
+            webview.goBack();
+        }
+    }
+
+    function goForward() {
+        if (webview.canGoForward()) {
+            webview.goForward();
+        }
+    }
+
+    function refreshPage() {
+        webview.reload();
+    }
+
+    function windowControl(action) {
+        ipcRenderer.send('window-control', action);
+    }
+
+    function zoomIn() {
+        webview.executeJavaScript('document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) + 0.1).toString()');
+    }
+
+    function zoomOut() {
+        webview.executeJavaScript('document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) - 0.1).toString()');
+    }
+
+    function resetZoom() {
+        webview.executeJavaScript('document.body.style.zoom = "1"');
+    }
+
+    function handleWheelEvent(event) {
+        if (event.ctrlKey) {
+            event.preventDefault(); // 防止默认的滚动行为
+            if (event.deltaY < 0) {
+                zoomIn();
+            } else if (event.deltaY > 0) {
+                zoomOut();
+            }
+        }
+    }
+
+    function changeSource(url) {
+        webview.src = url;
+    }
+
+    function toggleDropdown() {
+        const dropdown = document.getElementById('switchButton');
+        dropdown.classList.toggle('show');
+    }
+
+    // 点击空白区域时关闭下拉菜单
+    document.addEventListener('click', (event) => {
+        const dropdown = document.getElementById('switchButton');
+        if (!dropdown.contains(event.target)) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    document.getElementById('switchButton').addEventListener('click', (event) => {
+        event.stopPropagation(); // 阻止点击事件冒泡
+        toggleDropdown();
+    });
+
+    webview.addEventListener('wheel', (event) => {
+        handleWheelEvent(event);
+    });
+
+    function resizeWindow(size) {
+        ipcRenderer.send('resize-window', size);
+    }
+
+    ipcRenderer.on('window-state', (event, state) => {
+        const maximizeBtn = document.getElementById('maximize-btn');
+        if (state === 'maximized') {
+            maximizeBtn.innerHTML = '&#xe676;'; // Restore icon when the window is maximized
+        } else {
+            maximizeBtn.innerHTML = '&#xe675;'; // Maximize icon when the window is not maximized
+        }
+    });
+
+
+</script>
+<script>
+    let sources = [];
+
+    // 页面加载完成后立即加载sources
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadSources();
+    });
+
+    // 加载sources
+    async function loadSources() {
+      try {
+        sources = await ipcRenderer.invoke('get-sources');
+        renderSourcesList();
+      } catch (error) {
+        console.error('获取sources失败:', error);
+      }
+    }
+    
+    // 渲染sources
+    function renderSourcesList() {
+      const sourcesList = document.getElementById('sourcesList');
+      sourcesList.innerHTML = '';
+      
+      // 添加现有sources
+      sources.forEach((source) => {
+        const item = document.createElement('div');
+        item.className = 'source-item';
+        item.innerHTML = `
+          <span class="source-name">${source.name}</span>
+          <button class="delete-btn" onclick="deleteSource(${source.id})" style="color: red;">X</button>
+        `;
+        item.style.padding = '2px 0';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'space-between';
+        item.onclick = () => changeSource(source.url);
+        sourcesList.appendChild(item);
+      });
+      
+      // 添加分割线和输入框
+      const divider = document.createElement('div');
+      divider.className = 'divider';
+      sourcesList.appendChild(divider);
+      
+      // 添加新source的输入框
+      const addForm = document.createElement('div');
+      addForm.className = 'add-source-form';
+      addForm.innerHTML = `
+        <input type="text" id="sourceName" placeholder="名称" style="width: 50px;">
+        <input type="text" id="sourceUrl" placeholder="URL" style="width: 100px;">
+        <button onclick="addNewSource()">添加</button>
+      `;
+      // 给容器本身也阻止冒泡
+      addForm.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+      sourcesList.appendChild(addForm);
+    }
+    
+    // 添加新source
+    async function addNewSource() {
+      const nameInput = document.getElementById('sourceName');
+      const urlInput = document.getElementById('sourceUrl');
+      
+      const name = nameInput.value.trim();
+      const url = urlInput.value.trim();
+      
+      if (!name || !url) {
+        alert('请输入名称和URL');
+        return;
+      }
+      
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        alert('URL必须以http://或https://开头');
+        return;
+      }
+      
+      try {
+        sources = await ipcRenderer.invoke('add-source', name, url);
+        renderSourcesList();
+        alert('添加成功');
+      } catch (error) {
+        alert(`添加失败: ${error.message}`);
+      }
+    }
+    
+    // 删除source
+    async function deleteSource(id) {
+      if (!confirm('确定要删除吗?')) return;
+      
+      try {
+        sources = await ipcRenderer.invoke('remove-source', id);
+        renderSourcesList();
+      } catch (error) {
+        alert(`删除失败: ${error.message}`);
+      }
+    }
+</script>
 </html>

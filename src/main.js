@@ -1,7 +1,8 @@
-const { app, Menu, BrowserWindow, ipcMain, Tray } = require('electron');
+const { app, Menu, BrowserWindow, ipcMain, Tray, screen } = require('electron');
 const path = require('path');
 const { createSuspensionWindow, createWebsiteWindow } = require("./window.js")
-
+const Database = require('./db/db');
+let database;
 
 // 悬浮球的一些设置
 const suspensionConfig = {
@@ -27,7 +28,10 @@ let rotateFlag = true;
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () => {
+app.on('ready', async () => {
+    // 初始化数据库
+    database = new Database();
+    await database.init();
   pages.suspensionWin = createSuspensionWindow(suspensionConfig)
   // 创建托盘图标及其菜单
   tray = new Tray(path.join(__dirname, './assets/chat.png'));
@@ -151,9 +155,18 @@ ipcMain.on('window-control', (event, action) => {
 // 处理窗口尺寸调整
 ipcMain.on('resize-window', (event, size) => {
   if (size === 'wide') {
-    pages.websiteWin.setSize(640, 480);
+    const width = 640;
+    const height = 480;
+    pages.websiteWin.setSize(width, height);
+    
+    // 获取屏幕中心位置
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const workAreaSize = primaryDisplay.workAreaSize;
+    const x = Math.round((workAreaSize.width - width) / 2);
+    const y = Math.round((workAreaSize.height - height) / 2);
+    pages.websiteWin.setPosition(x, y);
   } else if (size === 'tall') {
-    pages.websiteWin.setSize(400, 730);
+    pages.websiteWin.setSize(400, 800);
     //左上角
     pages.websiteWin.setPosition(0, 0);
   }
@@ -199,3 +212,21 @@ ipcMain.on('openMenu', (e) => {
 ipcMain.on('setFloatIgnoreMouse', (e, data) => {
   pages.suspensionWin.setIgnoreMouseEvents(data, { forward: true })
 })
+
+
+// 替换原来的 IPC 处理器
+ipcMain.handle('get-sources', async () => {
+  return database.getAllSources();
+});
+
+ipcMain.handle('add-source', async (e, name, url) => {
+  return database.addSource(name, url);
+});
+
+ipcMain.handle('remove-source', async (e, id) => {
+  return database.deleteSource(id);
+});
+
+ipcMain.handle('update-source', async (e, id, name, url) => {
+  return database.updateSource(id, name, url);
+});
